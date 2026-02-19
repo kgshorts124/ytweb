@@ -8,12 +8,52 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Xcode Project
         run: |
           mkdir ytweb
           cd ytweb
+          
+          cat > ytweb.swift <<EOF
+          import UIKit
+          import WebKit
+
+          class ViewController: UIViewController {
+
+              var webView: WKWebView!
+
+              override func loadView() {
+                  webView = WKWebView()
+                  view = webView
+              }
+
+              override func viewDidLoad() {
+                  super.viewDidLoad()
+                  let url = URL(string: "https://m.youtube.com")!
+                  webView.load(URLRequest(url: url))
+                  webView.allowsBackForwardNavigationGestures = true
+              }
+          }
+
+          @main
+          class AppDelegate: UIResponder, UIApplicationDelegate {
+
+              var window: UIWindow?
+
+              func application(
+                  _ application: UIApplication,
+                  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+              ) -> Bool {
+
+                  window = UIWindow(frame: UIScreen.main.bounds)
+                  window?.rootViewController = ViewController()
+                  window?.makeKeyAndVisible()
+
+                  return true
+              }
+          }
+          EOF
 
           cat > Info.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -21,39 +61,37 @@ jobs:
           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-              <key>CFBundleDevelopmentRegion</key>
-              <string>en</string>
-              <key>CFBundleExecutable</key>
-              <string>ytweb</string>
               <key>CFBundleIdentifier</key>
               <string>com.ytweb.app</string>
-              <key>CFBundleInfoDictionaryVersion</key>
-              <string>6.0</string>
               <key>CFBundleName</key>
               <string>ytweb</string>
-              <key>CFBundlePackageType</key>
-              <string>APPL</string>
-              <key>CFBundleShortVersionString</key>
-              <string>1.0</string>
+              <key>CFBundleExecutable</key>
+              <string>ytweb</string>
               <key>CFBundleVersion</key>
               <string>1</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
               <key>LSRequiresIPhoneOS</key>
               <true/>
-              <key>UILaunchStoryboardName</key>
-              <string></string>
           </dict>
           </plist>
           EOF
 
-          cp ../main.swift .
+          xcodebuild -project /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Xcode/Templates/Project Templates/iOS/Application/Single View App.xctemplate \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO
 
-          swiftc main.swift -o ytweb
+      - name: Build App
+        run: |
+          xcodebuild \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Package IPA
         run: |
           mkdir Payload
-          mkdir Payload/ytweb.app
-          cp -r ytweb/* Payload/ytweb.app/
+          cp -r build/Release-iphoneos/*.app Payload/
           zip -r ytweb.ipa Payload
 
       - name: Upload IPA
