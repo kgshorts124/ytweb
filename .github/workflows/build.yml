@@ -1,0 +1,63 @@
+name: Build ytweb IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create Xcode Project
+        run: |
+          mkdir ytweb
+          cd ytweb
+
+          cat > Info.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key>
+              <string>en</string>
+              <key>CFBundleExecutable</key>
+              <string>ytweb</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.ytweb.app</string>
+              <key>CFBundleInfoDictionaryVersion</key>
+              <string>6.0</string>
+              <key>CFBundleName</key>
+              <string>ytweb</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>UILaunchStoryboardName</key>
+              <string></string>
+          </dict>
+          </plist>
+          EOF
+
+          cp ../main.swift .
+
+          swiftc main.swift -o ytweb
+
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          mkdir Payload/ytweb.app
+          cp -r ytweb/* Payload/ytweb.app/
+          zip -r ytweb.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: ytweb
+          path: ytweb.ipa
